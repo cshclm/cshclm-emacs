@@ -1,4 +1,4 @@
-;; org-snooze.el --- Automatic rescheduling of entries upon snoozing in org-mode.
+;; org-snooze.el --- reschedule entries upon keyword change in org-mode
 
 ;; Copyright (C) 2024 Chris Mann
 
