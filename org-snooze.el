@@ -15,6 +15,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(require 'cl)
 (require 'org)
 
 (defgroup org-snooze nil
@@ -51,7 +52,46 @@ See documentation for the \"TIME\" input under `org-schedule' for more."
                           org-snooze-until-default-time))
     (org-todo (or (org-entry-get nil "REPEAT_TO_STATE" 'selective) org-snooze-original-todo-keyword))))
 
-(add-hook 'org-after-todo-state-change-hook #'org-snooze-activity-hook)
+(defun org-snooze-enabled-p ()
+  "Predicate. Returns `t' if `org-snooze' is enabled; nil otherwise."
+  (not (null (member #'org-snooze-activity-hook org-after-todo-state-change-hook))))
+
+(defun org-snooze-enable ()
+  "Enable `org-snooze'."
+  (interactive)
+  (add-hook 'org-after-todo-state-change-hook #'org-snooze-activity-hook)
+  (message "Org snooze enabled"))
+
+(defun org-snooze-disable ()
+  (interactive)
+  (remove-hook 'org-after-todo-state-change-hook #'org-snooze-activity-hook)
+  (message "Org snooze disabled"))
+
+(defun org-snooze--select-target-state (enabledp input)
+  (cond
+   ((null input) (if enabledp 'deactivated 'activated))
+   ((and (numberp input) (zerop input)) 'deactivated)
+   (t 'activated)))
+
+(defun org-snooze--current-state (current-state)
+  (if (org-snooze-enabled-p)
+      'activated
+    'deactivated))
+
+(defun org-snooze--select-state-transition (enabledp input)
+  (let ((current-state (org-snooze--current-state enabledp))
+        (target-state (org-snooze--select-target-state enabledp input)))
+    (unless (equal current-state target-state)
+      (cl-case target-state
+        (activated 'activate)
+        (deactivated 'deactivate)))))
+
+(defun org-snooze (&optional input)
+  "Enable or disable `org-snooze'. Toggle enabled state if `input' is nil and disable when `input' is zero.  Otherwise enable."
+  (interactive "p")
+  (cl-case (org-snooze--select-state-transition (org-snooze-enabled-p) input)
+    (activate (org-snooze-enable))
+    (deactivate (org-snooze-disable))))
 
 (provide 'org-snooze)
 
